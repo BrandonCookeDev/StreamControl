@@ -2282,6 +2282,15 @@ QList<QStringList> MainWindow::condenseDataSet(QList<QStringList> oldSet) {
     return newSet;
 }
 
+void MainWindow::incrementScore(QString fieldName){
+    QString setName = completerList[fieldName]->getDataSetName();
+    int field = completerList[fieldName]->getDataField();
+    QString currentVal = ((ScLineEdit*)widgetList[fieldName])->text();
+    int incremented = std::stoi(currentVal)++;
+    ((ScLineEdit*)widgetList[fieldName])->text() = std::to_string(incremented);
+    saveData();
+}
+
 void MainWindow::saveDataSets() {
     QMapIterator<QString, ScCompleter *> i(completerList);
     QStringList updatedSets;

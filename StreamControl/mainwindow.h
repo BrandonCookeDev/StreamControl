@@ -86,6 +86,7 @@ public slots:
     QString getValueByID(QString);
     QString parseCmd(QString);
 
+    void incrementScore();
     void saveDataSets();
 
     void resetFields(QString);
