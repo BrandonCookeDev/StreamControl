@@ -35,3 +35,12 @@ macx {
 }
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
+
+# Additional options for static linking in MinGW
+
+equals(MINGW_STATIC, "TRUE") {
+    message("MinGW Static Linking QT5, libstdc++, libgcc")
+    CONFIG += staticlib
+    QMAKE_LFLAGS_RELEASE  += -static-libstdc++ -static-libgcc
+    QMAKE_LFLAGS_DEBUG += -static-libstdc++ -static-libgcc
+}

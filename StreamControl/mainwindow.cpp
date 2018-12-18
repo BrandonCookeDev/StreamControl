@@ -2283,11 +2283,8 @@ QList<QStringList> MainWindow::condenseDataSet(QList<QStringList> oldSet) {
 }
 
 void MainWindow::incrementScore(QString fieldName){
-    QString setName = completerList[fieldName]->getDataSetName();
-    int field = completerList[fieldName]->getDataField();
-    QString currentVal = ((ScLineEdit*)widgetList[fieldName])->text();
-    int incremented = std::stoi(currentVal)++;
-    ((ScLineEdit*)widgetList[fieldName])->text() = std::to_string(incremented);
+    QSpinBox *spinBox = ((QSpinBox*)widgetList[fieldName]);
+    spinBox->setValue(spinBox->value() + 1);
     saveData();
 }
 
