@@ -1044,6 +1044,8 @@ void MainWindow::resetFields(QString widget)
             ((ScLineEdit*)widgetList[key])->setText("");
         } else if (widgetType[key] == "checkBox") {
             ((QCheckBox*)widgetList[key])->setChecked(false);
+        } else if (widgetType[key] == "comboBox") {
+            ((ScComboBox*)widgetList[key])->setCurrentIndex(0);
         }
     }
 }
