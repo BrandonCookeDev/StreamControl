@@ -42,6 +42,12 @@ class QWidget;
 class QSignalMapper;
 class QToolBar;
 
+typedef struct TabOrderInfo {
+    QWidget *widget;
+    QString tabId;
+    bool visited;
+} TabOrderInfo;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -67,6 +73,10 @@ public slots:
     void parseTabLayout(QDomElement, QWidget*);
     void parseToolBar(QDomNode);
     void parseCLI(QDomNode);
+    
+    void addTabOrderInfo(QString widgetId, QString tabId, bool isAlt = false);
+    void processTabOrder();
+
     void addLabel(QDomElement, QWidget*);
     void addLine(QDomElement, QWidget*);
     void addButton(QDomElement, QWidget*);
@@ -148,6 +158,8 @@ private:
     QMap<QString, QString> settings;
     QMap<QString, QObject*> widgetList;
     QMap<QString, QWidget*> visualList;
+    QMap<QString, TabOrderInfo> tabList;
+    QMap<QString, TabOrderInfo> tabaltList;
     QMap<QString, ScCompleter*> completerList;
     QMap<QString, QString> widgetType;
     QMap<QString, QList<QString> > resetList;

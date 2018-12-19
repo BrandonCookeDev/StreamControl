@@ -1278,35 +1278,36 @@ void MainWindow::reloadLayout() {
 void MainWindow::parseLayout(QDomElement element, QWidget *parent) {
     QDomNode child = element.firstChildElement();
     while (!child.isNull()) {
-        QString tagName = child.toElement().tagName();
+        QDomElement element = child.toElement();
+        QString tagName = element.tagName();
         if (tagName == "label") {
-            addLabel(child.toElement(), parent);
+            addLabel(element, parent);
         } else if (tagName == "line") {
-            addLine(child.toElement(), parent);
+            addLine(element, parent);
         } else if (tagName == "button") {
-            addButton(child.toElement(), parent);
+            addButton(element, parent);
         } else if (tagName == "lineEdit") {
-            addLineEdit(child.toElement(), parent);
+            addLineEdit(element, parent);
         } else if (tagName == "spinBox") {
-            addSpinBox(child.toElement(), parent);
+            addSpinBox(element, parent);
         } else if (tagName == "checkBox") {
-            addCheckBox(child.toElement(), parent);
+            addCheckBox(element, parent);
         } else if (tagName == "radioGroup") {
-            addRadioGroup(child.toElement(), parent);
+            addRadioGroup(element, parent);
         } else if (tagName == "comboBox") {
-            addComboBox(child.toElement(), parent);
+            addComboBox(element, parent);
         } else if (tagName == "tweet") {
-            addTweetWidget(child.toElement(), parent);
+            addTweetWidget(element, parent);
             needLink = true;
         } else if (tagName == "challonge") {
-            addChallongeWidget(child.toElement(), parent, widgetList);
+            addChallongeWidget(element, parent, widgetList);
         } else if (tagName == "tabSet") {
-            QString newTabSet = addTabWidget(child.toElement(), parent);
-            parseTabLayout(child.toElement(), visualList[newTabSet]);
+            QString newTabSet = addTabWidget(element, parent);
+            parseTabLayout(element, visualList[newTabSet]);
         }
-
         child = child.nextSiblingElement();
     }
+    processTabOrder();
 }
 
 void MainWindow::parseTabLayout(QDomElement element, QWidget *parent) {
@@ -1593,6 +1594,31 @@ void MainWindow::parseCLI(QDomNode cliNode) {
 
 }
 
+void MainWindow::addTabOrderInfo(QString widgetId, QString tabId, bool isAlt) {
+    TabOrderInfo toi;
+    toi.visited = false;
+    toi.widget = ((QWidget*)widgetList[widgetId]);
+    toi.tabId = tabId;
+    if (isAlt) {
+        tabaltList[widgetId] = toi;
+    } else {
+        tabList[widgetId] = toi;
+    }
+}
+
+void MainWindow::processTabOrder() {
+    QMapIterator<QString, TabOrderInfo> i(tabList);
+    while (i.hasNext()) {
+        i.next();
+        TabOrderInfo toi = i.value();
+        while (!tabList[toi.tabId].visited) {
+            QWidget::setTabOrder(toi.widget, ((QWidget*)widgetList[toi.tabId]));
+            tabList[toi.tabId].visited = true;
+            toi = tabList[toi.tabId];
+        }
+    }
+}
+
 void MainWindow::addLabel(QDomElement element, QWidget *parent) {
 
     QString newLabel = "label"+QString::number(layoutIterator);
@@ -1743,6 +1769,13 @@ void MainWindow::addCheckBox(QDomElement element, QWidget *parent) {
     if(!element.attribute("uncheckHotkey").isEmpty()) {
         addHotkey(element.attribute("uncheckHotkey"),newCheckBox,"Uncheck");
     }
+    if (element.hasAttribute("tab")) {
+        addTabOrderInfo(newCheckBox, element.attribute("tab"));
+    }
+    if (element.hasAttribute("tabalt")) {
+        addTabOrderInfo(newCheckBox, element.attribute("tabalt"), true);
+    }
+
 }
 
 void MainWindow::addComboBox(QDomElement element, QWidget *parent) {
@@ -1838,6 +1871,15 @@ void MainWindow::addComboBox(QDomElement element, QWidget *parent) {
         connect(completerList[newComboBox], SIGNAL(activated(QString)), this, SLOT(completerActivate(QString)));
 
     }
+
+    if (element.hasAttribute("tab")) {
+        addTabOrderInfo(newComboBox, element.attribute("tab"));
+    }
+
+    if (element.hasAttribute("tabalt")) {
+        addTabOrderInfo(newComboBox, element.attribute("tabalt"), true);
+    }
+
 }
 
 void MainWindow::addRadioGroup(QDomElement element, QWidget *parent) {
@@ -1875,9 +1917,20 @@ void MainWindow::addRadioGroup(QDomElement element, QWidget *parent) {
         child = child.nextSiblingElement();
     }
 
+    if (element.hasAttribute("tab")) {
+        addTabOrderInfo(newRadioGroup, element.attribute("tab"));
+    }
+
+    if (element.hasAttribute("tabalt")) {
+        addTabOrderInfo(newRadioGroup, element.attribute("tabalt"), true);
+    }
+
 }
 
 void MainWindow::addButton(QDomElement element, QWidget *parent) {
+
+    bool newButtonCreated = false;
+
     if (element.attribute("type") == "reset") {
         QString newButton = element.attribute("id");
 
@@ -1903,7 +1956,7 @@ void MainWindow::addButton(QDomElement element, QWidget *parent) {
         if(!element.attribute("hotkey").isEmpty()) {
             addHotkey(element.attribute("hotkey"),newButton,"Reset");
         }
-
+        newButtonCreated = true;
     } else if (element.attribute("type") == "swap") {
 
         QString newButton = element.attribute("id");
@@ -1940,7 +1993,7 @@ void MainWindow::addButton(QDomElement element, QWidget *parent) {
         if(!element.attribute("hotkey").isEmpty()) {
             addHotkey(element.attribute("hotkey"),newButton,"Swap");
         }
-
+        newButtonCreated = true;
     } else if (element.attribute("type") == "timestamp") {
         bool nSaveOnClick = false;
 
@@ -1968,6 +2021,7 @@ void MainWindow::addButton(QDomElement element, QWidget *parent) {
         if(!element.attribute("hotkey").isEmpty()) {
             addHotkey(element.attribute("hotkey"),newButton,"Timestamp");
         }
+        newButtonCreated = true;
     } else if (element.attribute("type") == "setButton") {
         bool nSaveOnClick = false;
         if (element.attribute("saveonclick") == "true" || element.attribute("saveonclick") == "1") {
@@ -1996,6 +2050,18 @@ void MainWindow::addButton(QDomElement element, QWidget *parent) {
         setButtonMapper -> setMapping (((ScSetButton*)visualList[newButton]), newButton) ;
         if(!element.attribute("hotkey").isEmpty()) {
             addHotkey(element.attribute("hotkey"),newButton,"setButton");
+        }
+        newButtonCreated = true;
+    }
+
+    if (newButtonCreated) {
+        QString newButton = element.attribute("id");
+        if (element.hasAttribute("tab")) {
+            addTabOrderInfo(newButton, element.attribute("tab"));
+        }
+
+        if (element.hasAttribute("tabalt")) {
+            addTabOrderInfo(newButton, element.attribute("tabalt"), true);
         }
     }
 }
@@ -2111,7 +2177,14 @@ void MainWindow::addLineEdit(QDomElement element, QWidget *parent) {
         ((ScLineEdit*)widgetList[newLineEdit])->setCompleter(completerList[newLineEdit]);
 
         connect(completerList[newLineEdit], SIGNAL(activated(QString)), this, SLOT(completerActivate(QString)));
+    }
 
+    if (element.hasAttribute("tab")) {
+        addTabOrderInfo(newLineEdit, element.attribute("tab"));
+    }
+
+    if (element.hasAttribute("tabalt")) {
+        addTabOrderInfo(newLineEdit, element.attribute("tabalt"), true);
     }
 }
 
@@ -2499,6 +2572,15 @@ void MainWindow::addSpinBox(QDomElement element, QWidget *parent) {
     }
     widgetType[newSpinBox] = "spinBox";
 
+    if (element.hasAttribute("tab")) {
+        addTabOrderInfo(newSpinBox, element.attribute("tab"));
+    }
+
+    if (element.hasAttribute("tabalt")) {
+        addTabOrderInfo(newSpinBox, element.attribute("tabalt"), true);
+    }
+
+
 }
 
 QString MainWindow::addTabWidget(QDomElement element, QWidget *parent) {
@@ -2531,6 +2613,8 @@ void MainWindow::clearMaps() {
 
     widgetList.clear();
     visualList.clear();
+    tabList.clear();
+    tabaltList.clear();
     widgetType.clear();
     resetList.clear();
     swapSets.clear();
