@@ -45,6 +45,7 @@ class QToolBar;
 typedef struct TabOrderInfo {
     QWidget *widget;
     QString tabId;
+    bool master;
     bool visited;
 } TabOrderInfo;
 
@@ -74,7 +75,7 @@ public slots:
     void parseToolBar(QDomNode);
     void parseCLI(QDomNode);
     
-    void addTabOrderInfo(QString widgetId, QString tabId, bool isAlt = false);
+    void addTabOrderInfo(QString widgetId, QString tabId, bool isMaster = false, bool isAlt = false);
     void processTabOrder();
 
     void addLabel(QDomElement, QWidget*);

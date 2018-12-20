@@ -1238,6 +1238,8 @@ void MainWindow::loadLayout() {
         parseLayout(layout, centralWidget);
     }
 
+    processTabOrder();
+
     //Do ToolBar
     QDomNode toolBarNode = layout.namedItem("toolBar");
 
@@ -1307,7 +1309,6 @@ void MainWindow::parseLayout(QDomElement element, QWidget *parent) {
         }
         child = child.nextSiblingElement();
     }
-    processTabOrder();
 }
 
 void MainWindow::parseTabLayout(QDomElement element, QWidget *parent) {
@@ -1594,11 +1595,12 @@ void MainWindow::parseCLI(QDomNode cliNode) {
 
 }
 
-void MainWindow::addTabOrderInfo(QString widgetId, QString tabId, bool isAlt) {
+void MainWindow::addTabOrderInfo(QString widgetId, QString tabId, bool isMaster, bool isAlt) {
     TabOrderInfo toi;
-    toi.visited = false;
+    toi.master = isMaster;
     toi.widget = ((QWidget*)widgetList[widgetId]);
     toi.tabId = tabId;
+    toi.visited = false;
     if (isAlt) {
         tabaltList[widgetId] = toi;
     } else {
@@ -1611,11 +1613,29 @@ void MainWindow::processTabOrder() {
     while (i.hasNext()) {
         i.next();
         TabOrderInfo toi = i.value();
-        while (!tabList[toi.tabId].visited) {
+        if (!toi.master || toi.visited) { continue; }
+        QWidget *trackedBrokenWidget = NULL;
+        QWidget *firstBrokenWidget = NULL;
+        do {
+            QWidget *origNextFocus = toi.widget->nextInFocusChain();
+            QString origNextFocusId = origNextFocus->objectName();
+            if (!tabList.contains(origNextFocusId)) { // original next focus item will be 
+                if (trackedBrokenWidget) {            // broken backwards.
+                    QWidget::setTabOrder(origNextFocus, trackedBrokenWidget);
+                }
+                if (!firstBrokenWidget) { firstBrokenWidget = origNextFocus; }
+                trackedBrokenWidget = origNextFocus;
+            }
             QWidget::setTabOrder(toi.widget, ((QWidget*)widgetList[toi.tabId]));
-            tabList[toi.tabId].visited = true;
-            toi = tabList[toi.tabId];
-        }
+            toi.visited = true;
+            if (tabList.contains(toi.tabId)) {
+                toi = tabList[toi.tabId];
+            }
+        } while (!toi.visited);
+        QWidget *finalTab = ((QWidget*)widgetList[toi.tabId]);
+        QWidget *origNext = finalTab->nextInFocusChain();
+        QWidget::setTabOrder(finalTab, firstBrokenWidget);
+        QWidget::setTabOrder(trackedBrokenWidget, origNext);
     }
 }
 
@@ -1770,10 +1790,10 @@ void MainWindow::addCheckBox(QDomElement element, QWidget *parent) {
         addHotkey(element.attribute("uncheckHotkey"),newCheckBox,"Uncheck");
     }
     if (element.hasAttribute("tab")) {
-        addTabOrderInfo(newCheckBox, element.attribute("tab"));
+        addTabOrderInfo(newCheckBox, element.attribute("tab"), element.hasAttribute("tabmaster"));
     }
     if (element.hasAttribute("tabalt")) {
-        addTabOrderInfo(newCheckBox, element.attribute("tabalt"), true);
+        addTabOrderInfo(newCheckBox, element.attribute("tabalt"), element.hasAttribute("tabaltmaster"), true);
     }
 
 }
@@ -1873,11 +1893,10 @@ void MainWindow::addComboBox(QDomElement element, QWidget *parent) {
     }
 
     if (element.hasAttribute("tab")) {
-        addTabOrderInfo(newComboBox, element.attribute("tab"));
+        addTabOrderInfo(newComboBox, element.attribute("tab"), element.hasAttribute("tabmaster"));
     }
-
     if (element.hasAttribute("tabalt")) {
-        addTabOrderInfo(newComboBox, element.attribute("tabalt"), true);
+        addTabOrderInfo(newComboBox, element.attribute("tabalt"), element.hasAttribute("tabaltmaster"), true);
     }
 
 }
@@ -1918,11 +1937,10 @@ void MainWindow::addRadioGroup(QDomElement element, QWidget *parent) {
     }
 
     if (element.hasAttribute("tab")) {
-        addTabOrderInfo(newRadioGroup, element.attribute("tab"));
+        addTabOrderInfo(newRadioGroup, element.attribute("tab"), element.hasAttribute("tabmaster"));
     }
-
     if (element.hasAttribute("tabalt")) {
-        addTabOrderInfo(newRadioGroup, element.attribute("tabalt"), true);
+        addTabOrderInfo(newRadioGroup, element.attribute("tabalt"), element.hasAttribute("tabaltmaster"), true);
     }
 
 }
@@ -2057,11 +2075,10 @@ void MainWindow::addButton(QDomElement element, QWidget *parent) {
     if (newButtonCreated) {
         QString newButton = element.attribute("id");
         if (element.hasAttribute("tab")) {
-            addTabOrderInfo(newButton, element.attribute("tab"));
+            addTabOrderInfo(newButton, element.attribute("tab"), element.hasAttribute("tabmaster"));
         }
-
         if (element.hasAttribute("tabalt")) {
-            addTabOrderInfo(newButton, element.attribute("tabalt"), true);
+            addTabOrderInfo(newButton, element.attribute("tabalt"), element.hasAttribute("tabaltmaster"), true);
         }
     }
 }
@@ -2180,11 +2197,10 @@ void MainWindow::addLineEdit(QDomElement element, QWidget *parent) {
     }
 
     if (element.hasAttribute("tab")) {
-        addTabOrderInfo(newLineEdit, element.attribute("tab"));
+        addTabOrderInfo(newLineEdit, element.attribute("tab"), element.hasAttribute("tabmaster"));
     }
-
     if (element.hasAttribute("tabalt")) {
-        addTabOrderInfo(newLineEdit, element.attribute("tabalt"), true);
+        addTabOrderInfo(newLineEdit, element.attribute("tabalt"), element.hasAttribute("tabaltmaster"), true);
     }
 }
 
@@ -2573,11 +2589,10 @@ void MainWindow::addSpinBox(QDomElement element, QWidget *parent) {
     widgetType[newSpinBox] = "spinBox";
 
     if (element.hasAttribute("tab")) {
-        addTabOrderInfo(newSpinBox, element.attribute("tab"));
+        addTabOrderInfo(newSpinBox, element.attribute("tab"), element.hasAttribute("tabmaster"));
     }
-
     if (element.hasAttribute("tabalt")) {
-        addTabOrderInfo(newSpinBox, element.attribute("tabalt"), true);
+        addTabOrderInfo(newSpinBox, element.attribute("tabalt"), element.hasAttribute("tabaltmaster"), true);
     }
 
 
