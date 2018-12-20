@@ -1614,28 +1614,13 @@ void MainWindow::processTabOrder() {
         i.next();
         TabOrderInfo toi = i.value();
         if (!toi.master || toi.visited) { continue; }
-        QWidget *trackedBrokenWidget = NULL;
-        QWidget *firstBrokenWidget = NULL;
         do {
-            QWidget *origNextFocus = toi.widget->nextInFocusChain();
-            QString origNextFocusId = origNextFocus->objectName();
-            if (!tabList.contains(origNextFocusId)) { // original next focus item will be 
-                if (trackedBrokenWidget) {            // broken backwards.
-                    QWidget::setTabOrder(origNextFocus, trackedBrokenWidget);
-                }
-                if (!firstBrokenWidget) { firstBrokenWidget = origNextFocus; }
-                trackedBrokenWidget = origNextFocus;
-            }
             QWidget::setTabOrder(toi.widget, ((QWidget*)widgetList[toi.tabId]));
             toi.visited = true;
             if (tabList.contains(toi.tabId)) {
                 toi = tabList[toi.tabId];
             }
         } while (!toi.visited);
-        QWidget *finalTab = ((QWidget*)widgetList[toi.tabId]);
-        QWidget *origNext = finalTab->nextInFocusChain();
-        QWidget::setTabOrder(finalTab, firstBrokenWidget);
-        QWidget::setTabOrder(trackedBrokenWidget, origNext);
     }
 }
 
